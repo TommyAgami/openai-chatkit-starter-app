@@ -32,52 +32,29 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
-/* ===== Full RTL Chat UI Alignment ===== */
+/* FORCE RTL layout inside chat */
 [data-chatkit-container] {
   direction: rtl !important;
   text-align: right !important;
 }
 
-/* Make chat bubbles right-aligned */
-[data-chatkit-container] .chat-message,
+/* Bubbles RTL alignment */
 [data-chatkit-container] .message,
-[data-chatkit-container] .message-container {
-  direction: rtl !important;
-  text-align: right !important;
-  justify-content: flex-end !important;
-}
-
-/* Ensure assistant/user messages mirror correctly */
-[data-chatkit-container] .chat-message.user {
-  align-items: flex-end !important;
-}
-[data-chatkit-container] .chat-message.assistant {
-  align-items: flex-start !important;
-}
-
-/* Avatar should flip to the right in Hebrew */
-[data-chatkit-container] .avatar,
-[data-chatkit-container] .chat-message .avatar {
-  order: 1 !important;
-  margin-left: 8px !important;
-  margin-right: 0 !important;
-}
-
-/* Message text blocks */
-[data-chatkit-container] .text,
 [data-chatkit-container] .markdown,
 [data-chatkit-container] p,
-[data-chatkit-container] span,
-[data-chatkit-container] li {
+[data-chatkit-container] span {
   direction: rtl !important;
   text-align: right !important;
 }
 
-/* Input box RTL (important for typing correctly) */
-[data-chatkit-container] textarea,
-[data-chatkit-container] input[type="text"],
-[data-chatkit-container] input[type="search"] {
+/* Input area RTL */
+[data-chatkit-container] textarea {
   direction: rtl !important;
   text-align: right !important;
+}
+
+/* Align chat to right side like WhatsApp/Like ChatGPT Hebrew */
+[data-chatkit-container] .messages {
+  align-items: flex-end !important;
 }
 
