@@ -19,15 +19,15 @@ export const STARTER_PROMPTS: StartScreenPrompt[] = [
   },
 ];
 
-export const PLACEHOLDER_INPUT = "אני כאן לכל שאלה...";
-export const GREETING = "מדפורם AI";
+export const PLACEHOLDER_INPUT = "...אני כאן לכל שאלה";
+export const GREETING = "AI מדפורם";
 
 /** ✅ Base theme (colors, fonts) — RTL will be controlled dynamically */
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
   color: {
     grayscale: {
       hue: 204,
-      tint: 7,
+      tint: 2,
       shade: 1,
     },
     accent: {
