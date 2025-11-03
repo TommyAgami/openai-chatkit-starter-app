@@ -32,31 +32,4 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
-/* ===== RTL support for Hebrew (ChatKit container + messages) ===== */
-html, body, [data-chatkit-container] {
-  direction: rtl;
-  text-align: right;
-}
 
-/* Ensure paragraph and message content aligns right */
-[data-chatkit-container] p,
-[data-chatkit-container] li,
-[data-chatkit-container] div,
-[data-chatkit-container] span {
-  direction: rtl;
-  text-align: right;
-}
-
-/* Input area */
-[data-chatkit-container] textarea,
-[data-chatkit-container] input {
-  direction: rtl;
-  text-align: right;
-}
-
-/* Bubbles alignment */
-[data-chatkit-container] .chat-message,
-[data-chatkit-container] .message-container {
-  direction: rtl;
-  text-align: right;
-}
