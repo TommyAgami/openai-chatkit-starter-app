@@ -5,33 +5,31 @@ export const WORKFLOW_ID =
 
 export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 
-/** ✅ Simple + Useful Hebrew Prompts */
 export const STARTER_PROMPTS: StartScreenPrompt[] = [
   {
-    label: "איך מגדירים יומן?",
-    prompt: "איך מגדירים ומנהלים יומן במערכת?",
-    icon: "calendar",
-  },
-  {
-    label: "הפקת חשבונית/קבלה",
-    prompt: "איך מפיקים חשבונית או קבלה במערכת?",
-    icon: "receipt",
+    label: "איזה פיצ'רים יש במדפורם",
+    prompt: "מה הפיצ'רים הבולטים שלכם?",
+    icon: "circle-question",
   },
 ];
 
-/** ✅ Hebrew Placeholder */
-export const PLACEHOLDER_INPUT = "כתבו כאן שאלה…";
+export const PLACEHOLDER_INPUT = "אני כאן לכל שאלה...";
 
-/** ✅ Hebrew Greeting */
-export const GREETING = "שלום 👋 איך אפשר לעזור?";
+export const GREETING = "מה תרצו לדעת??";
 
-/** ✅ Keep theme simple and Medform-colored */
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
   color: {
+    grayscale: {
+      hue: 220,
+      tint: 6,
+      shade: theme === "dark" ? -1 : -4,
+    },
     accent: {
-      primary: "#1B2A59", // Medform navy
+      primary: theme === "dark" ? "#f1f5f9" : "#0f172a",
       level: 1,
     },
   },
   radius: "round",
+  // Add other theme options here
+  // chatkit.studio/playground to explore config options
 });
