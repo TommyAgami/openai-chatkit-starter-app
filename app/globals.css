@@ -35,3 +35,64 @@
     font-family: var(--font-sans);
   }
 }
+/* ===== Medform Chat Theme (applies inside ChatKit container) ===== */
+@layer base {
+
+  /* Make the whole chat RTL */
+  [data-chatkit-container] {
+    direction: rtl !important;
+    text-align: right !important;
+    font-family: "Assistant", "Heebo", Arial, sans-serif !important;
+  }
+
+  /* Chat wrapper background + spacing */
+  [data-chatkit-container] .chat-root,
+  [data-chatkit-container] .chat-container {
+    background: #F7F9FC !important;
+    border-radius: 24px !important;
+    padding: 12px !important;
+  }
+
+  /* Assistant message bubble */
+  [data-chatkit-container] .message.assistant {
+    background: #F3F9FF !important;
+    border: 1px solid rgba(27,42,89,0.12) !important;
+    color: #0D1B2A !important;
+    border-radius: 22px !important;
+    padding: 12px 16px !important;
+    margin: 6px 0 !important;
+  }
+
+  /* User message bubble */
+  [data-chatkit-container] .message.user {
+    background: #1B2A59 !important; /* Medform Navy */
+    color: #ffffff !important;
+    border-radius: 22px !important;
+    padding: 12px 16px !important;
+    margin: 6px 0 !important;
+  }
+
+  /* Input area styling */
+  [data-chatkit-container] textarea {
+    background: #ffffff !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
+    padding: 12px 14px !important;
+    direction: rtl !important;
+    text-align: right !important;
+    font-size: 15px !important;
+  }
+
+  [data-chatkit-container] textarea:focus {
+    border-color: #22D3EE !important;
+    box-shadow: 0 0 0 3px rgba(34,211,238,0.25) !important;
+  }
+
+  /* Send button */
+  [data-chatkit-container] button[type="submit"] {
+    background: #1B2A59 !important;
+    color: white !important;
+    border-radius: 14px !important;
+    padding: 8px 14px !important;
+  }
+}
