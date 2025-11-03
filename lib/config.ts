@@ -5,7 +5,6 @@ export const WORKFLOW_ID =
 
 export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 
-/** ✅ Hebrew starter prompts */
 export const STARTER_PROMPTS: StartScreenPrompt[] = [
   {
     label: "איזה פיצ'רים יש במדפורם?",
@@ -19,27 +18,27 @@ export const STARTER_PROMPTS: StartScreenPrompt[] = [
   },
 ];
 
-export const PLACEHOLDER_INPUT = "אני כאן לכל שאלה...";
+export const PLACEHOLDER_INPUT = "אני כאן לכל שאלה…";
 export const GREETING = "מדפורם AI";
 
-/** ✅ Base theme (colors, fonts) — RTL will be controlled dynamically */
+/** Theme (matches the ChatKit studio config) */
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
+  colorScheme: theme,
+  radius: "pill",
+  density: "comfortable",
   color: {
     grayscale: {
       hue: 204,
       tint: 7,
-      shade: 1,
+      shade: theme === "dark" ? -2 : 1,
     },
     accent: {
-      primary: "#262f5a", // Medform Navy
+      primary: "#1B2A59",
       level: 1,
     },
   },
-  radius: "pill",
-  density: "compact",
   typography: {
     baseSize: 16,
-    fontFamily:
-      '"Heebo", "Assistant", "OpenAI Sans", system-ui, Helvetica, Arial, sans-serif',
+    fontFamily: `"Assistant", "Heebo", Arial, sans-serif`,
   },
 });
