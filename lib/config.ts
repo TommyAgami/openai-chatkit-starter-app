@@ -7,38 +7,29 @@ export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 
 export const STARTER_PROMPTS: StartScreenPrompt[] = [
   {
-    label: "איזה פיצ'רים יש במדפורם?",
-    prompt: "מה הפיצ'רים הבולטים שלכם?",
-    icon: "circle-question",
-  },
-  {
-    label: "מעוניין/ת בהדגמה?",
-    prompt: "שלום, אפשר לקבוע הדגמה?",
+    label: "What can you do?",
+    prompt: "What can you do?",
     icon: "circle-question",
   },
 ];
 
-export const PLACEHOLDER_INPUT = "אני כאן לכל שאלה…";
-export const GREETING = "מדפורם AI";
+export const PLACEHOLDER_INPUT = "Ask anything...";
 
-/** Theme (matches the ChatKit studio config) */
+export const GREETING = "How can I help you today?";
+
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
-  colorScheme: theme,
-  radius: "pill",
-  density: "comfortable",
   color: {
     grayscale: {
-      hue: 204,
-      tint: 7,
-      shade: theme === "dark" ? -2 : 1,
+      hue: 220,
+      tint: 6,
+      shade: theme === "dark" ? -1 : -4,
     },
     accent: {
-      primary: "#1B2A59",
+      primary: theme === "dark" ? "#f1f5f9" : "#0f172a",
       level: 1,
     },
   },
-  typography: {
-    baseSize: 16,
-    fontFamily: `"Assistant", "Heebo", Arial, sans-serif`,
-  },
+  radius: "round",
+  // Add other theme options here
+  // chatkit.studio/playground to explore config options
 });
