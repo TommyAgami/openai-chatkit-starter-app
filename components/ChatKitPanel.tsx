@@ -484,11 +484,11 @@ function extractErrorDetail(
       return (nestedError as { message: string }).message;
     }
   }
-
   if (typeof payload.message === "string") {
     return payload.message;
   }
 
   return fallback;
-};
+}};
+
 
