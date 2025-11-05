@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChatKit } from "@openai/chatkit-react";
 import {
   STARTER_PROMPTS,
@@ -12,9 +13,9 @@ import {
 } from "@/lib/config";
 import type { ColorScheme } from "@/hooks/useColorScheme";
 
-// auto detect text direction
+/** Detect Hebrew/Arabic so we can right-align only when needed */
 function detectDirection(text: string): "rtl" | "ltr" {
-  return /[\u0590-\u05FF]/.test(text) ? "rtl" : "ltr";
+  return /[\u0590-\u05FF\u0600-\u06FF]/.test(text) ? "rtl" : "ltr";
 }
 
 export type FactAction = {
@@ -38,12 +39,11 @@ export function ChatKitPanel({
 }: ChatKitPanelProps) {
   const processedFacts = useRef(new Set<string>());
   const isMountedRef = useRef(true);
-
   const [isInitializingSession, setIsInitializingSession] = useState(true);
 
-  // session creation
+  /** Create a client secret (keep your backend as-is) */
   const getClientSecret = useCallback(async () => {
-    const response = await fetch(CREATE_SESSION_ENDPOINT, {
+    const res = await fetch(CREATE_SESSION_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -52,38 +52,85 @@ export function ChatKitPanel({
       }),
     });
 
-    const raw = await response.text();
+    const raw = await res.text();
     const data = raw ? JSON.parse(raw) : {};
-
-    if (!response.ok || !data.client_secret) {
+    if (!res.ok || !data?.client_secret) {
       throw new Error("Failed to initialize chat session.");
     }
-
     return data.client_secret as string;
   }, []);
 
-  const chatkit = useChatKit({
+  /** Keep using ChatKit logic; we’ll render our own UI */
+  const chatkit: any = useChatKit({
     api: { getClientSecret },
     theme: { colorScheme: theme, ...getThemeConfig(theme) },
     startScreen: { greeting: GREETING, prompts: STARTER_PROMPTS },
     composer: { placeholder: PLACEHOLDER_INPUT, attachments: { enabled: true } },
     onResponseEnd,
     onThreadChange: () => processedFacts.current.clear(),
+    onClientTool: async (invocation: { name: string; params: Record<string, unknown> }) => {
+      if (invocation.name === "switch_theme") {
+        const requested = invocation.params.theme;
+        if (requested === "light" || requested === "dark") {
+          onThemeRequest(requested as ColorScheme);
+          return { success: true };
+        }
+        return { success: false };
+      }
+      if (invocation.name === "record_fact") {
+        const id = String(invocation.params.fact_id ?? "");
+        const text = String(invocation.params.fact_text ?? "");
+        if (!id || processedFacts.current.has(id)) return { success: true };
+        processedFacts.current.add(id);
+        await onWidgetAction({ type: "save", factId: id, factText: text.replace(/\s+/g, " ").trim() });
+        return { success: true };
+      }
+      return { success: false };
+    },
   });
 
-  const control = chatkit.control;
-  const messages = control?.messages ?? [];
+  /** Thread/messages access that works across versions */
+  const thread: any = chatkit?.thread ?? chatkit?.control?.thread ?? null;
+  const rawMessages: any[] =
+    thread?.items ??
+    thread?.messages ??
+    chatkit?.messages ??
+    [];
 
-  const isReady =
-    control &&
-    control.thread &&
-    Array.isArray(messages);
+  /** Map to simple shape (role, text) */
+  const messages = useMemo(
+    () =>
+      rawMessages
+        .map((m: any) => {
+          const role: "user" | "assistant" | string =
+            m.role ?? m.author ?? m.sender ?? "";
+          // content could be various shapes across versions
+          const text: string =
+            (typeof m.content === "string" && m.content) ||
+            m.text ||
+            m.message ||
+            m.delta ||
+            m.content?.text ||
+            m.content?.[0]?.text ||
+            m.content?.[0]?.content ||
+            "";
+          if (!text || (role !== "user" && role !== "assistant")) return null;
+          return { role: role as "user" | "assistant", text };
+        })
+        .filter(Boolean),
+    [rawMessages]
+  ) as Array<{ role: "user" | "assistant"; text: string }>;
+
+  /** Consider session ready when control AND thread exist */
+  const isReady = Boolean(chatkit?.control && thread);
 
   useEffect(() => {
     if (!isReady && isInitializingSession) {
-      setTimeout(() => setIsInitializingSession(false), 300);
+      // allow a moment for the session to initialize
+      const t = setTimeout(() => setIsInitializingSession(false), 300);
+      return () => clearTimeout(t);
     }
-  }, [isReady]);
+  }, [isReady, isInitializingSession]);
 
   if (!isReady) {
     return (
@@ -93,46 +140,69 @@ export function ChatKitPanel({
     );
   }
 
-  const sendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    const form = e.currentTarget as HTMLFormElement;
-    const text = (new FormData(form).get("message") as string)?.trim();
-    if (!text) return;
-
-    control.sendMessage({ text });
-    form.reset();
+  /** Send message via whichever API is available in your version */
+  const doSend = async (text: string) => {
+    const api: any = chatkit;
+    if (api?.sendMessage) {
+      await api.sendMessage({ content: text, text });
+      return;
+    }
+    if (api?.control?.sendMessage) {
+      await api.control.sendMessage({ text, content: text });
+      return;
+    }
+    if (api?.control?.composer?.send) {
+      await api.control.composer.send(text);
+      return;
+    }
+    console.warn("[ChatKitPanel] No sendMessage API found on chatkit; check library version.");
   };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = (new FormData(e.currentTarget as HTMLFormElement).get("message") as string)?.trim();
+    if (!text) return;
+    await doSend(text);
+    (e.currentTarget as HTMLFormElement).reset();
+  };
+
+  const isStreaming = Boolean(chatkit?.isStreaming || chatkit?.control?.isStreaming);
 
   return (
     <div className="relative flex flex-col h-[90vh] bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
 
-      {/* MESSAGES */}
+      {/* Thread */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.map((msg, index) => {
-          const dir = detectDirection(msg.text);
-          const isUser = msg.role === "user";
-
+        {messages.map((m, i) => {
+          const dir = detectDirection(m.text);
+          const isUser = m.role === "user";
           return (
             <div
-              key={index}
+              key={i}
               className={`max-w-[75%] px-3 py-2 rounded-xl whitespace-pre-wrap break-words ${
                 isUser
                   ? "bg-[#DCF8C6] ml-auto text-right"
                   : "bg-[#F1F1F1] mr-auto text-right"
               }`}
-              style={{
-                direction: dir,
-                unicodeBidi: "plaintext",
-              }}
+              style={{ direction: dir, unicodeBidi: "plaintext" }}
             >
-              {msg.text}
+              {m.text}
             </div>
           );
         })}
+
+        {isStreaming && (
+          <div
+            className="max-w-[75%] px-3 py-2 rounded-xl whitespace-pre-wrap break-words bg-[#F1F1F1] mr-auto text-right"
+            style={{ direction: "rtl", unicodeBidi: "plaintext" }}
+          >
+            …
+          </div>
+        )}
       </div>
 
-      {/* INPUT BAR */}
-      <form onSubmit={sendMessage} className="p-3 border-t flex gap-2 bg-white dark:bg-slate-900">
+      {/* Composer */}
+      <form onSubmit={onSubmit} className="p-3 border-t flex gap-2 bg-white dark:bg-slate-900">
         <input
           name="message"
           placeholder="הקלד הודעה…"
@@ -149,4 +219,3 @@ export function ChatKitPanel({
     </div>
   );
 }
-
