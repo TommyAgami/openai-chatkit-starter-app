@@ -26,7 +26,7 @@ export const GREETING = "AI מדפורם";
  * This is the correct place — ChatKitPanel will call it automatically.
  */
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
-  colorScheme: light, // <- allows light/dark switching
+  colorScheme: "light", // <- allows light/dark switching
   radius: "pill",
   density: "compact",
   color: {
