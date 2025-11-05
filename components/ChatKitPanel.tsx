@@ -45,9 +45,9 @@ const createInitialErrors = (): ErrorState => ({
 
 export function ChatKitPanel({
   theme,
-  onWidgetAction,
+  onWidgetAction: _onWidgetAction,   // renamed to avoid unused var TS warning
   onResponseEnd,
-  onThemeRequest,
+  onThemeRequest: _onThemeRequest,   // renamed to avoid unused var TS warning
 }: ChatKitPanelProps) {
   const processedFacts = useRef(new Set<string>());
   const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
@@ -86,7 +86,7 @@ export function ChatKitPanel({
     const handleError = (event: Event) => {
       if (!isMountedRef.current) return;
       setScriptStatus("error");
-      const detail = (event as CustomEvent)?.detail ?? "unknown error";
+      const detail = (event as CustomEvent<unknown>)?.detail ?? "unknown error";
       setErrorState({ script: `Error: ${detail}`, retryable: false });
       setIsInitializingSession(false);
     };
@@ -101,7 +101,8 @@ export function ChatKitPanel({
         if (!window.customElements?.get("openai-chatkit")) {
           handleError(
             new CustomEvent("chatkit-script-error", {
-              detail: "ChatKit web component is unavailable.",
+              detail:
+                "ChatKit web component is unavailable. Verify that the script URL is reachable.",
             })
           );
         }
@@ -122,7 +123,7 @@ export function ChatKitPanel({
   useEffect(() => {
     if (!isWorkflowConfigured && isMountedRef.current) {
       setErrorState({
-        session: "Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID in .env.local",
+        session: "Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID in your .env.local file.",
         retryable: false,
       });
       setIsInitializingSession(false);
@@ -143,9 +144,23 @@ export function ChatKitPanel({
 
   const getClientSecret = useCallback(
     async (currentSecret: string | null) => {
-      if (!isWorkflowConfigured) throw new Error("Workflow not configured.");
+      if (isDev) {
+        console.info("[ChatKitPanel] getClientSecret invoked", {
+          currentSecretPresent: Boolean(currentSecret),
+          workflowId: WORKFLOW_ID,
+          endpoint: CREATE_SESSION_ENDPOINT,
+        });
+      }
 
-      if (isMountedRef.current && !currentSecret) setIsInitializingSession(true);
+      if (!isWorkflowConfigured) {
+        const detail =
+          "Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID in your .env.local file.";
+        if (isMountedRef.current) {
+          setErrorState({ session: detail, retryable: false });
+          setIsInitializingSession(false);
+        }
+        throw new Error(detail);
+      }
 
       try {
         const response = await fetch(CREATE_SESSION_ENDPOINT, {
@@ -157,16 +172,18 @@ export function ChatKitPanel({
           }),
         });
 
-        const data = JSON.parse(await response.text() || "{}");
-
+        const raw = await response.text();
+        const data = raw ? JSON.parse(raw) : {};
         if (!response.ok) throw new Error(data?.error ?? response.statusText);
 
         return data.client_secret as string;
       } finally {
-        if (isMountedRef.current && !currentSecret) setIsInitializingSession(false);
+        if (isMountedRef.current && !currentSecret) {
+          setIsInitializingSession(false);
+        }
       }
     },
-    [isWorkflowConfigured]
+    [isWorkflowConfigured, setErrorState]
   );
 
   const chatkit = useChatKit({
@@ -179,9 +196,10 @@ export function ChatKitPanel({
     onResponseEnd,
     onResponseStart: () => setErrorState({ integration: null, retryable: false }),
     onThreadChange: () => processedFacts.current.clear(),
+    onError: ({ error }) => console.error("ChatKit error", error),
   });
 
-  /** ✅ FINAL RTL + RIGHT BUBBLE ALIGNMENT BLOCK */
+  /** ✅ Apply RTL + bubble alignment inside Shadow DOM */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -199,24 +217,26 @@ export function ChatKitPanel({
       }
 
       .assistant,
+      .assistant *,
+      .user,
+      .user * {
+        direction: rtl !important;
+        text-align: right !important;
+      }
+
+      .assistant,
       .user {
         margin-left: auto !important;
         margin-right: 0 !important;
         align-self: flex-end !important;
       }
 
-      .assistant .bubble,
-      .user .bubble,
-      .assistant .bubble *,
-      .user .bubble *,
-      markdown-view,
-      markdown-view *,
-      .text,
-      .text * {
-        direction: rtl !important;
+      thread-item,
+      .thread-item,
+      .thread-item * {
         text-align: right !important;
-        unicode-bidi: plaintext !important;
-        white-space: break-spaces !important;
+        direction: rtl !important;
+        justify-content: flex-end !important;
       }
     `;
     host.shadowRoot.appendChild(style);
@@ -224,6 +244,16 @@ export function ChatKitPanel({
 
   const activeError = errors.session ?? errors.integration;
   const blockingError = errors.script ?? activeError;
+
+  if (isDev) {
+    console.debug("[ChatKitPanel] render state", {
+      isInitializingSession,
+      hasControl: Boolean(chatkit.control),
+      scriptStatus,
+      hasError: Boolean(blockingError),
+      workflowId: WORKFLOW_ID,
+    });
+  }
 
   return (
     <div
@@ -254,14 +284,27 @@ export function ChatKitPanel({
   );
 }
 
-function extractErrorDetail(
-  payload: Record<string, unknown> | undefined,
-  fallback: string
-): string {
+type ErrorPayload = {
+  error?: string | { message?: string };
+  message?: string;
+  details?: unknown;
+};
+
+function extractErrorDetail(payload: ErrorPayload | undefined, fallback: string): string {
   if (!payload) return fallback;
+
   if (typeof payload.error === "string") return payload.error;
-  if (payload.error && typeof payload.error === "object" && "message" in payload.error)
-    return (payload.error as any).message ?? fallback;
+
+  if (
+    payload.error &&
+    typeof payload.error === "object" &&
+    "message" in payload.error &&
+    typeof payload.error.message === "string"
+  ) {
+    return payload.error.message;
+  }
+
   if (typeof payload.message === "string") return payload.message;
+
   return fallback;
 }
