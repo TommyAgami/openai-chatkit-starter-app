@@ -193,10 +193,7 @@ export function ChatKitPanel({
           body: JSON.stringify({
             workflow: { id: WORKFLOW_ID },
             chatkit_configuration: {
-              // enable attachments
-              file_upload: {
-                enabled: true,
-              },
+              file_upload: { enabled: true },
             },
           }),
         });
@@ -273,24 +270,13 @@ export function ChatKitPanel({
     },
     composer: {
       placeholder: PLACEHOLDER_INPUT,
-      attachments: {
-        // Enable attachments
-        enabled: true,
-      },
+      attachments: { enabled: true },
     },
-    threadItemActions: {
-      feedback: false,
-    },
-    onClientTool: async (invocation: {
-      name: string;
-      params: Record<string, unknown>;
-    }) => {
+    threadItemActions: { feedback: false },
+    onClientTool: async (invocation) => {
       if (invocation.name === "switch_theme") {
         const requested = invocation.params.theme;
         if (requested === "light" || requested === "dark") {
-          if (isDev) {
-            console.debug("[ChatKitPanel] switch_theme", requested);
-          }
           onThemeRequest(requested);
           return { success: true };
         }
@@ -314,25 +300,15 @@ export function ChatKitPanel({
 
       return { success: false };
     },
-    onResponseEnd: () => {
-      onResponseEnd();
-    },
-    onResponseStart: () => {
-      setErrorState({ integration: null, retryable: false });
-    },
-    onThreadChange: () => {
-      processedFacts.current.clear();
-    },
-    onError: ({ error }: { error: unknown }) => {
-      // Note that Chatkit UI handles errors for your users.
-      // Thus, your app code doesn't need to display errors on UI.
-      console.error("ChatKit error", error);
-    },
+    onResponseEnd,
+    onResponseStart: () => setErrorState({ integration: null, retryable: false }),
+    onThreadChange: () => processedFacts.current.clear(),
+    onError: ({ error }) => console.error("ChatKit error", error),
   });
 
   /** ─────────────────────────────────────────────────────────────
-   *  RTL ALIGN BLOCK (safe for ChatKit web component + SSR)
-   *  ────────────────────────────────────────────────────────────*/
+   *  RTL ALIGN BLOCK (existing)
+   *  ─────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -343,12 +319,10 @@ export function ChatKitPanel({
 
       if (!host) return;
 
-      // make host RTL + right aligned
       host.setAttribute("dir", "rtl");
       host.style.direction = "rtl";
       host.style.textAlign = "right";
 
-      // align any visible inputs/textareas within host light DOM
       const inputs = host.querySelectorAll("input, textarea");
       inputs.forEach((el) => {
         (el as HTMLInputElement | HTMLTextAreaElement).style.direction = "rtl";
@@ -356,10 +330,8 @@ export function ChatKitPanel({
       });
     };
 
-    // run once
     apply();
 
-    // observe ONLY the chat host for dynamic updates
     const hostNode =
       document.querySelector("openai-chatkit") ||
       document.querySelector("openai-chat");
@@ -371,7 +343,46 @@ export function ChatKitPanel({
 
     return () => mo.disconnect();
   }, []);
-  /** ─────────────────────────────────────────────────────────── */
+
+  /**
+   * ✅ RTL BUBBLE ALIGNMENT BLOCK (new)
+   * Moves both user + assistant message bubbles to the RIGHT
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const host =
+      document.querySelector("openai-chatkit") ||
+      document.querySelector("openai-chat");
+
+    if (!host || !host.shadowRoot) return;
+
+    const style = document.createElement("style");
+    style.textContent = `
+      :host {
+        direction: rtl !important;
+        text-align: right !important;
+      }
+
+      .assistant,
+      .assistant *,
+      .user,
+      .user * {
+        direction: rtl !important;
+        text-align: right !important;
+        justify-content: flex-end !important;
+        align-items: flex-end !important;
+      }
+
+      .assistant,
+      .user {
+        margin-left: auto !important;
+        margin-right: 0 !important;
+      }
+    `;
+
+    host.shadowRoot.appendChild(style);
+  }, []);
 
   const activeError = errors.session ?? errors.integration;
   const blockingError = errors.script ?? activeError;
@@ -419,47 +430,14 @@ function extractErrorDetail(
   payload: Record<string, unknown> | undefined,
   fallback: string
 ): string {
-  if (!payload) {
-    return fallback;
-  }
-
+  if (!payload) return fallback;
   const error = payload.error;
-  if (typeof error === "string") {
-    return error;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const msg = (error as { message?: unknown }).message;
+    if (typeof msg === "string") return msg;
   }
-
-  if (
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
-  ) {
-    return (error as { message: string }).message;
-  }
-
   const details = payload.details;
-  if (typeof details === "string") {
-    return details;
-  }
-
-  if (details && typeof details === "object" && "error" in details) {
-    const nestedError = (details as { error?: unknown }).error;
-    if (typeof nestedError === "string") {
-      return nestedError;
-    }
-    if (
-      nestedError &&
-      typeof nestedError === "object" &&
-      "message" in nestedError &&
-      typeof (nestedError as { message?: unknown }).message === "string"
-    ) {
-      return (nestedError as { message: string }).message;
-    }
-  }
-
-  if (typeof payload.message === "string") {
-    return payload.message;
-  }
-
+  if (typeof details === "string") return details;
   return fallback;
 }
