@@ -339,11 +339,12 @@ export function ChatKitPanel({
     },
   });
   // ✅ Add this *right here lead capture begin
-// ✅ Lead Capture Effect
+// ✅ Lead Capture Effect (correct for your ChatKit version)
 useEffect(() => {
-  if (!chatkit?.messages) return;
+  const msgs = chatkit?.thread?.messages;
+  if (!msgs || msgs.length === 0) return;
 
-  const lastUserMessage = [...chatkit.messages]
+  const lastUserMessage = [...msgs]
     .reverse()
     .find((m) => m?.role === "user" && typeof m.content === "string");
 
@@ -351,6 +352,7 @@ useEffect(() => {
 
   const text = lastUserMessage.content.trim();
 
+  // 1) Detect Name
   if (!detectedName) {
     const name = detectName(text);
     if (name) {
@@ -359,6 +361,7 @@ useEffect(() => {
     }
   }
 
+  // 2) Detect Phone
   if (detectedName && !detectedPhone) {
     const phone = detectPhone(text);
     if (phone) {
@@ -367,6 +370,7 @@ useEffect(() => {
     }
   }
 
+  // 3) Detect Specialty + Send Lead
   if (detectedName && detectedPhone && !leadSent) {
     const specialty = detectSpecialty(text);
     if (specialty) {
@@ -376,15 +380,10 @@ useEffect(() => {
         specialty,
       });
       setLeadSent(true);
-      console.log("✅ Lead sent:", {
-        name: detectedName,
-        phone: detectedPhone,
-        specialty,
-      });
+      console.log("✅ Lead Sent", { detectedName, detectedPhone, specialty });
     }
   }
-}, [chatkit?.messages, detectedName, detectedPhone, leadSent]);
-
+}, [chatkit?.thread?.messages, detectedName, detectedPhone, leadSent]);
 //-------------------lead capture effect------------//
   const activeError = errors.session ?? errors.integration;
   const blockingError = errors.script ?? activeError;
@@ -485,8 +484,5 @@ function extractErrorDetail(
   if (typeof payload.message === "string") {
     return payload.message;
   }
-
   return fallback;
-}};
-
-
+}
