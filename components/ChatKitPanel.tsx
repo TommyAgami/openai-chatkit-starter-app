@@ -484,5 +484,8 @@ function extractErrorDetail(
   if (typeof payload.message === "string") {
     return payload.message;
   }
+
   return fallback;
 }
+
+} // ✅ closes ChatKitPanel component
