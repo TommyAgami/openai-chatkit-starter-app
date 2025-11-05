@@ -32,3 +32,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* Add this section to force right alignment in the chat */
+openai-chatkit {
+  direction: rtl;
+  text-align: right;
+}
