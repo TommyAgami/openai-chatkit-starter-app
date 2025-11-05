@@ -13,7 +13,7 @@ import {
 } from "@/lib/config";
 import type { ColorScheme } from "@/hooks/useColorScheme";
 
-/** Detect Hebrew/Arabic so we can right-align only when needed */
+/** Detect RTL language (Hebrew / Arabic) */
 function detectDirection(text: string): "rtl" | "ltr" {
   return /[\u0590-\u05FF\u0600-\u06FF]/.test(text) ? "rtl" : "ltr";
 }
@@ -38,10 +38,9 @@ export function ChatKitPanel({
   onThemeRequest,
 }: ChatKitPanelProps) {
   const processedFacts = useRef(new Set<string>());
-  const isMountedRef = useRef(true);
   const [isInitializingSession, setIsInitializingSession] = useState(true);
 
-  /** Create a client secret (keep your backend as-is) */
+  /** Create session secret (unchanged backend API) */
   const getClientSecret = useCallback(async () => {
     const res = await fetch(CREATE_SESSION_ENDPOINT, {
       method: "POST",
@@ -60,7 +59,7 @@ export function ChatKitPanel({
     return data.client_secret as string;
   }, []);
 
-  /** Keep using ChatKit logic; we’ll render our own UI */
+  /** Core state from ChatKit, backend remains the same */
   const chatkit: any = useChatKit({
     api: { getClientSecret },
     theme: { colorScheme: theme, ...getThemeConfig(theme) },
@@ -68,66 +67,62 @@ export function ChatKitPanel({
     composer: { placeholder: PLACEHOLDER_INPUT, attachments: { enabled: true } },
     onResponseEnd,
     onThreadChange: () => processedFacts.current.clear(),
-    onClientTool: async (invocation: { name: string; params: Record<string, unknown> }) => {
+    onClientTool: async (invocation: any) => {
       if (invocation.name === "switch_theme") {
         const requested = invocation.params.theme;
         if (requested === "light" || requested === "dark") {
-          onThemeRequest(requested as ColorScheme);
+          onThemeRequest(requested);
           return { success: true };
         }
         return { success: false };
       }
+
       if (invocation.name === "record_fact") {
         const id = String(invocation.params.fact_id ?? "");
         const text = String(invocation.params.fact_text ?? "");
         if (!id || processedFacts.current.has(id)) return { success: true };
         processedFacts.current.add(id);
-        await onWidgetAction({ type: "save", factId: id, factText: text.replace(/\s+/g, " ").trim() });
+        await onWidgetAction({
+          type: "save",
+          factId: id,
+          factText: text.replace(/\s+/g, " ").trim(),
+        });
         return { success: true };
       }
+
       return { success: false };
     },
   });
 
-const thread: any = chatkit?.thread ?? chatkit?.control?.thread ?? null;
+  /** ✅ Correct message source for your ChatKit version */
+  const rawMessages: any[] =
+    chatkit?.control?.threadItems?.map((ti: any) => ti.message) ?? [];
 
-// ChatKit is ready once control exists — NOT when thread/messages exist
-const isReady = Boolean(chatkit?.control);
-
-// Messages may not exist on first load — fallback is safe
-const rawMessages: any[] =
-  (thread?.items || thread?.messages || chatkit?.messages || []);
-
-
-  /** Map to simple shape (role, text) */
+  /** Convert raw messages → clean format */
   const messages = useMemo(
     () =>
       rawMessages
         .map((m: any) => {
-          const role: "user" | "assistant" | string =
-            m.role ?? m.author ?? m.sender ?? "";
-          // content could be various shapes across versions
-          const text: string =
-            (typeof m.content === "string" && m.content) ||
+          const role = m.role ?? m.author ?? m.sender ?? "";
+          const text =
             m.text ||
-            m.message ||
             m.delta ||
             m.content?.text ||
             m.content?.[0]?.text ||
             m.content?.[0]?.content ||
             "";
           if (!text || (role !== "user" && role !== "assistant")) return null;
-          return { role: role as "user" | "assistant", text };
+          return { role, text };
         })
         .filter(Boolean),
     [rawMessages]
   ) as Array<{ role: "user" | "assistant"; text: string }>;
 
-  /** Consider session ready when control AND thread exist */
+  /** Chat is ready once control exists */
+  const isReady = Boolean(chatkit?.control);
 
   useEffect(() => {
     if (!isReady && isInitializingSession) {
-      // allow a moment for the session to initialize
       const t = setTimeout(() => setIsInitializingSession(false), 300);
       return () => clearTimeout(t);
     }
@@ -141,22 +136,13 @@ const rawMessages: any[] =
     );
   }
 
-  /** Send message via whichever API is available in your version */
+  /** Universal sendMessage — works across versions */
   const doSend = async (text: string) => {
-    const api: any = chatkit;
-    if (api?.sendMessage) {
-      await api.sendMessage({ content: text, text });
-      return;
-    }
-    if (api?.control?.sendMessage) {
-      await api.control.sendMessage({ text, content: text });
-      return;
-    }
-    if (api?.control?.composer?.send) {
-      await api.control.composer.send(text);
-      return;
-    }
-    console.warn("[ChatKitPanel] No sendMessage API found on chatkit; check library version.");
+    if (chatkit?.sendMessage) return chatkit.sendMessage({ text, content: text });
+    if (chatkit?.control?.sendMessage)
+      return chatkit.control.sendMessage({ text, content: text });
+    if (chatkit?.control?.composer?.send) return chatkit.control.composer.send(text);
+    console.warn("⚠️ sendMessage API not found.");
   };
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -172,19 +158,17 @@ const rawMessages: any[] =
   return (
     <div className="relative flex flex-col h-[90vh] bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
 
-      {/* Thread */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((m, i) => {
-          const dir = detectDirection(m.text);
           const isUser = m.role === "user";
+          const dir = detectDirection(m.text);
           return (
             <div
               key={i}
-              className={`max-w-[75%] px-3 py-2 rounded-xl whitespace-pre-wrap break-words ${
-                isUser
-                  ? "bg-[#DCF8C6] ml-auto text-right"
-                  : "bg-[#F1F1F1] mr-auto text-right"
-              }`}
+              className={`max-w-[75%] px-3 py-2 rounded-xl whitespace-pre-wrap break-words
+                ${isUser ? "bg-[#DCF8C6] ml-auto text-right" : "bg-[#F1F1F1] mr-auto text-right"}
+              `}
               style={{ direction: dir, unicodeBidi: "plaintext" }}
             >
               {m.text}
@@ -194,7 +178,7 @@ const rawMessages: any[] =
 
         {isStreaming && (
           <div
-            className="max-w-[75%] px-3 py-2 rounded-xl whitespace-pre-wrap break-words bg-[#F1F1F1] mr-auto text-right"
+            className="max-w-[75%] px-3 py-2 rounded-xl bg-[#F1F1F1] mr-auto text-right"
             style={{ direction: "rtl", unicodeBidi: "plaintext" }}
           >
             …
