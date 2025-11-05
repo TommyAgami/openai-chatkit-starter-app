@@ -8,20 +8,25 @@ export const CREATE_SESSION_ENDPOINT = "/api/create-session";
 export const STARTER_PROMPTS: StartScreenPrompt[] = [
   {
     label: "איזה פיצ'רים יש במדפורם",
-    prompt: "מה הפיצ'רים הבולטים שלכם?",
+    prompt: "מה הפיצ'רים הבולטים שלכם",
+    icon: "circle-question",
+  },
+  {
+    label: "מעוניין/ת לקבוע הדגמה",
+    prompt: "אני רוצה לקבוע הדגמה בבקשה",
     icon: "circle-question",
   },
 ];
 
 export const PLACEHOLDER_INPUT = "כאן לכל שאלה...";
-export const GREETING = "AI מדפורם — איך אפשר לעזור היום?";
+export const GREETING = "AI מדפורם";
 
 /**
  * ✅ This merges your theme with ChatKitStudio theme settings
  * This is the correct place — ChatKitPanel will call it automatically.
  */
 export const getThemeConfig = (theme: ColorScheme): ThemeOption => ({
-  colorScheme: theme, // <- allows light/dark switching
+  colorScheme: light, // <- allows light/dark switching
   radius: "pill",
   density: "compact",
   color: {
