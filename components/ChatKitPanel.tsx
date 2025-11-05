@@ -268,6 +268,7 @@ export function ChatKitPanel({
     composer: {
       placeholder: PLACEHOLDER_INPUT,
     },
+    locale: "he", // Hebrew
     threadItemActions: {
       feedback: false,
     },
