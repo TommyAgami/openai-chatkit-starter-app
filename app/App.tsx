@@ -296,26 +296,31 @@ export function ChatKitPanel({
     threadItemActions: {
       feedback: false,
     },
-    onClientTool: async (invocation: {
-      name: string;
-      params: Record<string, unknown>;
-    }) => {
-      if (invocation.name === "switch_theme") {
-        const requested = invocation.params.theme;
-        if (requested === "light" || requested === "dark") {
-          if (isDev) {
-            console.debug("[ChatKitPanel] switch_theme", requested);
-          }
-          onThemeRequest(requested);
-          return { success: true };
+ onClientTool: async (invocation: {
+    name: string;
+    params: Record<string, unknown>;
+  }) => {
+    if (invocation.name === "switch_theme") {
+      const requested = invocation.params.theme;
+      if (requested === "light" || requested === "dark") {
+        if (isDev) {
+          console.debug("[ChatKitPanel] switch_theme", requested);
         }
-        return { success: false };
+        onThemeRequest(requested);
+        return { success: true }; // Correct return type
       }
+      return { success: false }; // Correct return type
+    }
 
-      if (invocation.name === "record_fact") {
-        const id = String(invocation.params.fact_id ?? "");
-      }
-    },
+    if (invocation.name === "record_fact") {
+      const id = String(invocation.params.fact_id ?? "");
+      // Add your logic here and return the correct type
+      return {}; // You must return an object here
+    }
+
+    // A default return is also necessary
+    return {};
+},
   });
 
   if (isDev) {
