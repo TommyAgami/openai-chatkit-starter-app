@@ -490,6 +490,5 @@ function extractErrorDetail(
   }
 
   return fallback;
-}
-}};
+};
 
