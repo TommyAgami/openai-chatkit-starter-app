@@ -417,30 +417,4 @@ function extractErrorDetail(
   return fallback;
 }
 //new code by idiot GPT
-useEffect(() => {
-  const host = document.querySelector("openai-chatkit") || document.querySelector("openai-chat");
-  if (!host || !host.shadowRoot) return;
-
-  const style = document.createElement("style");
-  style.textContent = `
-    * { direction: rtl !important; text-align: right !important; }
-    
-    .message.user, .user, [data-role="user"] {
-      justify-content: flex-end !important;
-      text-align: right !important;
-    }
-
-    .message.assistant, .assistant, [data-role="assistant"] {
-      justify-content: flex-end !important;
-      text-align: right !important;
-    }
-
-    input, textarea {
-      direction: rtl !important;
-      text-align: right !important;
-    }
-  `;
-
-  host.shadowRoot.appendChild(style);
-}, []);
 
