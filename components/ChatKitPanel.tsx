@@ -50,20 +50,25 @@ export function ChatKitPanel({
   onResponseEnd,
   onThemeRequest,
 }: ChatKitPanelProps) {
+
+  // ✅ Add conversation flow states FIRST
+  const [detectedName, setDetectedName] = useState<string | null>(null);
+  const [detectedPhone, setDetectedPhone] = useState<string | null>(null);
   const [leadSent, setLeadSent] = useState(false);
+
+  // ✅ Existing states remain unchanged
   const processedFacts = useRef(new Set<string>());
   const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
   const [isInitializingSession, setIsInitializingSession] = useState(true);
   const isMountedRef = useRef(true);
   const [scriptStatus, setScriptStatus] = useState<
-  const [detectedName, setDetectedName] = useState<string | null>(null);
-  const [detectedPhone, setDetectedPhone] = useState<string | null>(null);
     "pending" | "ready" | "error"
   >(() =>
     isBrowser && window.customElements?.get("openai-chatkit")
       ? "ready"
       : "pending"
   );
+
   const [widgetInstanceKey, setWidgetInstanceKey] = useState(0);
 
   const setErrorState = useCallback((updates: Partial<ErrorState>) => {
