@@ -339,10 +339,11 @@ export function ChatKitPanel({
     },
   });
   // ✅ Add this *right here lead capture begin
+// ✅ Lead Capture Effect
 useEffect(() => {
-  if (!chatkit?.session?.messages) return;
+  if (!chatkit?.messages) return;
 
-  const lastUserMessage = [...chatkit.session.messages]
+  const lastUserMessage = [...chatkit.messages]
     .reverse()
     .find((m) => m?.role === "user" && typeof m.content === "string");
 
@@ -350,7 +351,6 @@ useEffect(() => {
 
   const text = lastUserMessage.content.trim();
 
-  // 1) Detect Name once
   if (!detectedName) {
     const name = detectName(text);
     if (name) {
@@ -359,7 +359,6 @@ useEffect(() => {
     }
   }
 
-  // 2) Detect Phone once (only after name)
   if (detectedName && !detectedPhone) {
     const phone = detectPhone(text);
     if (phone) {
@@ -368,7 +367,6 @@ useEffect(() => {
     }
   }
 
-  // 3) Detect Specialty only AFTER name + phone
   if (detectedName && detectedPhone && !leadSent) {
     const specialty = detectSpecialty(text);
     if (specialty) {
@@ -385,8 +383,8 @@ useEffect(() => {
       });
     }
   }
+}, [chatkit?.messages, detectedName, detectedPhone, leadSent]);
 
-}, [chatkit?.thread?.messages, detectedName, detectedPhone, leadSent]);
 //-------------------lead capture effect------------//
   const activeError = errors.session ?? errors.integration;
   const blockingError = errors.script ?? activeError;
