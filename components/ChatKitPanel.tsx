@@ -192,6 +192,12 @@ export function ChatKitPanel({
           },
           body: JSON.stringify({
             workflow: { id: WORKFLOW_ID },
+            chatkit_configuration: {
+              // enable attachments
+              file_upload: {
+                enabled: true,
+              },
+            },
           }),
         });
 
@@ -267,8 +273,11 @@ export function ChatKitPanel({
     },
     composer: {
       placeholder: PLACEHOLDER_INPUT,
+      attachments: {
+        // Enable attachments
+        enabled: true,
+      },
     },
-    locale: "ar", // Arabic for RTL.
     threadItemActions: {
       feedback: false,
     },
