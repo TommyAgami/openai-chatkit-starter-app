@@ -10,7 +10,7 @@ import {
   WORKFLOW_ID,
   getThemeConfig,
 } from "@/lib/config";
-import { ErrorOverlay } from "./ErrorOverlay"; // <-- Corrected import path
+import { ErrorOverlay } from "../components/ChatKitPanel/ErrorOverlay";
 import type { ColorScheme } from "@/hooks/useColorScheme";
 
 export type FactAction = {
