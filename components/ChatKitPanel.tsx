@@ -89,13 +89,15 @@ export function ChatKitPanel({
     },
   });
 
-  /** Thread/messages access that works across versions */
-  const thread: any = chatkit?.thread ?? chatkit?.control?.thread ?? null;
-  const rawMessages: any[] =
-    thread?.items ??
-    thread?.messages ??
-    chatkit?.messages ??
-    [];
+const thread: any = chatkit?.thread ?? chatkit?.control?.thread ?? null;
+
+// ChatKit is ready once control exists — NOT when thread/messages exist
+const isReady = Boolean(chatkit?.control);
+
+// Messages may not exist on first load — fallback is safe
+const rawMessages: any[] =
+  (thread?.items || thread?.messages || chatkit?.messages || []);
+
 
   /** Map to simple shape (role, text) */
   const messages = useMemo(
