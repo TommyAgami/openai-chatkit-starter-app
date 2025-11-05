@@ -414,17 +414,16 @@ export function ChatKitPanel({
 
   // ✅ Lead Capture Effect 
   useEffect(() => {
-    // ⚠️ SUPPRESSION 1: Required because 'thread' is not in the public ChatKitControl type.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    // ⚠️ BLOCK SUPPRESSION: Required because 'thread' and 'm: any' are not in the public ChatKitControl type.
     const msgs = (chatkit?.control as any)?.thread?.messages; 
     
     if (!msgs || msgs.length === 0) return;
 
-    // ⚠️ SUPPRESSION 2: Required because the message object structure is unknown (m: any).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const lastUserMessage = [...msgs]
       .reverse()
       .find((m: any) => m?.role === "user" && typeof m.content === "string");
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     if (!lastUserMessage) return;
 
