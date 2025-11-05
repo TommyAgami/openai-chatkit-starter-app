@@ -268,7 +268,6 @@ export function ChatKitPanel({
     composer: {
       placeholder: PLACEHOLDER_INPUT,
     },
-    locale: "ar", // Arabic for RTL.
     threadItemActions: {
       feedback: false,
     },
