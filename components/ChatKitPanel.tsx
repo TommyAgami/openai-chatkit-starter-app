@@ -124,7 +124,6 @@ const rawMessages: any[] =
   ) as Array<{ role: "user" | "assistant"; text: string }>;
 
   /** Consider session ready when control AND thread exist */
-  const isReady = Boolean(chatkit?.control && thread);
 
   useEffect(() => {
     if (!isReady && isInitializingSession) {
