@@ -65,7 +65,23 @@ export function ChatKitPanel({
   const setErrorState = useCallback((updates: Partial<ErrorState>) => {
     setErrors((current) => ({ ...current, ...updates }));
   }, []);
-
+  //------------ATTEMPT TO ADD RIGHT ALIGN-----
+  useEffect(() => {
+  const observer = new MutationObserver(() => {
+    const chatEl =
+      document.querySelector('[data-chatkit-root], openai-chatkit, .chat-root');
+    if (chatEl) {
+      chatEl.style.textAlign = "right";
+      const input = chatEl.querySelector("input, textarea");
+      if (input) {
+        (input as HTMLInputElement).style.textAlign = "right";
+      }
+    }
+  });
+//-------------END OF SECTION TO ADD RIGHT ALIGN------ Tommy.
+  observer.observe(document.body, { childList: true, subtree: true });
+  return () => observer.disconnect();
+}, []);
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
