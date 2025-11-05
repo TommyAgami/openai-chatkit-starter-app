@@ -491,5 +491,5 @@ function extractErrorDetail(
 
   return fallback;
 }
-//new code by idiot GPT
+}};
 
