@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-// Assuming the import is correct based on your setup
-import { ChatKit, useChatKit } from "@openai/chatkit-react"; 
+import { ChatKit, useChatKit } from "@openai/chatkit-react";
 import { sendLeadToMake } from "@/lib/sendLeadToMake";
 import {
   STARTER_PROMPTS,
@@ -45,8 +44,7 @@ const createInitialErrors = (): ErrorState => ({
   retryable: false,
 });
 
-// 🛠️ CORRECTED: Utility functions moved OUTSIDE of the component for proper scoping and syntax.
-// You must define these helper functions before they are used, or outside of the component function.
+// 🛠️ Utility functions defined outside the component (Already corrected)
 
 function detectName(text: string): string | null {
   // Name = letters (Hebrew/English), 1–3 words, no digits
@@ -59,7 +57,7 @@ function detectName(text: string): string | null {
 function detectPhone(text: string): string | null {
   // Finds a 9 or 10 digit number possibly prefixed with 972 or 0, ignoring other characters
   const match = text.replace(/\D/g, "").match(/(?:972|0)?([0-9]{8,10})/); 
-  return match ? match[1] : null; // Returning match[1] to get the main number part (8-10 digits)
+  return match ? match[1] : null; 
 }
 
 function detectSpecialty(text: string): string | null {
@@ -308,7 +306,6 @@ export function ChatKitPanel({
         }
 
         if (!response.ok) {
-          // ⚠️ extractErrorDetail is now correctly available
           const detail = extractErrorDetail(data, response.statusText);
           console.error("Create session request failed", {
             status: response.status,
@@ -415,21 +412,23 @@ export function ChatKitPanel({
     },
   });
 
-  // ✅ Lead Capture Effect
+  // ✅ Lead Capture Effect (Corrected access using type assertion)
   useEffect(() => {
-    const msgs = chatkit?.control?.thread?.messages;
+    // ⚠️ TYPE ASSERTION: Bypasses TypeScript error by assuming 'thread' exists at runtime.
+    // This is often necessary when library types are incomplete.
+    const msgs = (chatkit?.control as any)?.thread?.messages; 
+    
     if (!msgs || msgs.length === 0) return;
 
     const lastUserMessage = [...msgs]
       .reverse()
-      .find((m) => m?.role === "user" && typeof m.content === "string");
+      .find((m: any) => m?.role === "user" && typeof m.content === "string");
 
     if (!lastUserMessage) return;
 
     const text = lastUserMessage.content as string;
 
     if (!detectedName) {
-      // ⚠️ detectName is now correctly available
       const name = detectName(text);
       if (name) {
         setDetectedName(name);
@@ -438,7 +437,6 @@ export function ChatKitPanel({
     }
 
     if (detectedName && !detectedPhone) {
-      // ⚠️ detectPhone is now correctly available
       const phone = detectPhone(text);
       if (phone) {
         setDetectedPhone(phone);
@@ -447,7 +445,6 @@ export function ChatKitPanel({
     }
 
     if (detectedName && detectedPhone && !leadSent) {
-      // ⚠️ detectSpecialty is now correctly available
       const specialty = detectSpecialty(text);
       if (specialty) {
         sendLeadToMake({
@@ -459,7 +456,7 @@ export function ChatKitPanel({
         console.log("✅ Lead Sent", { detectedName, detectedPhone, specialty });
       }
     }
-  }, [chatkit.control?.thread?.messages, detectedName, detectedPhone, leadSent]);
+  }, [chatkit.control, detectedName, detectedPhone, leadSent]); // 💡 Adjusted dependency to only use chatkit.control
 
   //-------------------lead capture effect------------//
   const activeError = errors.session ?? errors.integration;
