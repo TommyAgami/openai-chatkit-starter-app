@@ -62,9 +62,6 @@ export function ChatKitPanel({
   );
   const [widgetInstanceKey, setWidgetInstanceKey] = useState(0);
 
-  // Add a ref to the component
-  const chatKitRef = useRef<HTMLDivElement>(null);
-
   const setErrorState = useCallback((updates: Partial<ErrorState>) => {
     setErrors((current) => ({ ...current, ...updates }));
   }, []);
@@ -148,29 +145,6 @@ export function ChatKitPanel({
     }
   }, [isWorkflowConfigured, setErrorState]);
 
-  // Inject the CSS styles into the iframe after it loads
-  useEffect(() => {
-    const iframe = chatKitRef.current?.querySelector('iframe');
-    if (iframe) {
-        // Use a timeout to ensure the iframe content is fully loaded
-        const timeout = setTimeout(() => {
-            if (iframe.contentDocument) {
-                const style = document.createElement('style');
-                style.textContent = `
-                    .ck-message-text {
-                        text-align: right !important;
-                    }
-                    .ck-thread-item-content {
-                        direction: rtl !important;
-                    }
-                `;
-                iframe.contentDocument.head.appendChild(style);
-            }
-        }, 1000); // 1-second delay for robustness
-        return () => clearTimeout(timeout);
-    }
-  }, [widgetInstanceKey]); // Rerun the effect when the widget instance changes
-
   const handleResetChat = useCallback(() => {
     processedFacts.current.clear();
     if (isBrowser) {
@@ -218,6 +192,12 @@ export function ChatKitPanel({
           },
           body: JSON.stringify({
             workflow: { id: WORKFLOW_ID },
+            chatkit_configuration: {
+              // enable attachments
+              file_upload: {
+                enabled: true,
+              },
+            },
           }),
         });
 
@@ -293,6 +273,10 @@ export function ChatKitPanel({
     },
     composer: {
       placeholder: PLACEHOLDER_INPUT,
+      attachments: {
+        // Enable attachments
+        enabled: true,
+      },
     },
     threadItemActions: {
       feedback: false,
@@ -315,38 +299,120 @@ export function ChatKitPanel({
 
       if (invocation.name === "record_fact") {
         const id = String(invocation.params.fact_id ?? "");
+        const text = String(invocation.params.fact_text ?? "");
+        if (!id || processedFacts.current.has(id)) {
+          return { success: true };
+        }
+        processedFacts.current.add(id);
+        void onWidgetAction({
+          type: "save",
+          factId: id,
+          factText: text.replace(/\s+/g, " ").trim(),
+        });
+        return { success: true };
       }
+
+      return { success: false };
+    },
+    onResponseEnd: () => {
+      onResponseEnd();
+    },
+    onResponseStart: () => {
+      setErrorState({ integration: null, retryable: false });
+    },
+    onThreadChange: () => {
+      processedFacts.current.clear();
+    },
+    onError: ({ error }: { error: unknown }) => {
+      // Note that Chatkit UI handles errors for your users.
+      // Thus, your app code doesn't need to display errors on UI.
+      console.error("ChatKit error", error);
     },
   });
 
+  const activeError = errors.session ?? errors.integration;
+  const blockingError = errors.script ?? activeError;
+
   if (isDev) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-      console.debug("[ChatKitPanel] rerendering with options", chatkit.options);
-    }, [chatkit.options]);
+    console.debug("[ChatKitPanel] render state", {
+      isInitializingSession,
+      hasControl: Boolean(chatkit.control),
+      scriptStatus,
+      hasError: Boolean(blockingError),
+      workflowId: WORKFLOW_ID,
+    });
   }
 
-  const { options, clientSecret } = chatkit;
-
   return (
-    <div ref={chatKitRef} style={{ height: "100%" }}>
-      {scriptStatus === "ready" && clientSecret && options.workflow?.id ? (
-        <ChatKit key={widgetInstanceKey} options={options} />
-      ) : (
-        <ErrorOverlay
-          errors={errors}
-          isInitializing={isInitializingSession}
-          onReset={handleResetChat}
-        />
-      )}
+    <div className="relative pb-8 flex h-[90vh] w-full rounded-2xl flex-col overflow-hidden bg-white shadow-sm transition-colors dark:bg-slate-900">
+      <ChatKit
+        key={widgetInstanceKey}
+        control={chatkit.control}
+        className={
+          blockingError || isInitializingSession
+            ? "pointer-events-none opacity-0"
+            : "block h-full w-full"
+        }
+      />
+      <ErrorOverlay
+        error={blockingError}
+        fallbackMessage={
+          blockingError || !isInitializingSession
+            ? null
+            : "Loading assistant session..."
+        }
+        onRetry={blockingError && errors.retryable ? handleResetChat : null}
+        retryLabel="Restart chat"
+      />
     </div>
   );
 }
 
-const extractErrorDetail = (
-  body: Record<string, unknown>,
-  statusText: string
-): string => {
-  const detail = body?.detail ?? body?.message;
-  return typeof detail === "string" ? detail : statusText;
-};
+function extractErrorDetail(
+  payload: Record<string, unknown> | undefined,
+  fallback: string
+): string {
+  if (!payload) {
+    return fallback;
+  }
+
+  const error = payload.error;
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  const details = payload.details;
+  if (typeof details === "string") {
+    return details;
+  }
+
+  if (details && typeof details === "object" && "error" in details) {
+    const nestedError = (details as { error?: unknown }).error;
+    if (typeof nestedError === "string") {
+      return nestedError;
+    }
+    if (
+      nestedError &&
+      typeof nestedError === "object" &&
+      "message" in nestedError &&
+      typeof (nestedError as { message?: unknown }).message === "string"
+    ) {
+      return (nestedError as { message: string }).message;
+    }
+  }
+
+  if (typeof payload.message === "string") {
+    return payload.message;
+  }
+
+  return fallback;
+}
