@@ -132,6 +132,7 @@ export function ChatKitPanel({
   const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
   const [isInitializingSession, setIsInitializingSession] = useState(true);
   const isMountedRef = useRef(true);
+  const isFirstLoadRef = useRef(true);
   const [scriptStatus, setScriptStatus] = useState<
     "pending" | "ready" | "error"
   >(() =>
@@ -431,7 +432,26 @@ export function ChatKitPanel({
       console.error("ChatKit error", error);
     },
   });
+// 🛠️ לוגיקה לתיקון גלילה אוטומטית (Autoscroll)
+  useEffect(() => {
+    // רץ רק כאשר הסשן מאותחל בהצלחה בפעם הראשונה
+    if (!isInitializingSession && isFirstLoadRef.current) {
+      // השהיה קצרה לוודא שרכיב ה-ChatKit סיים את כל ה-Rendering הפנימי שלו
+      const timeoutId = setTimeout(() => {
+        if (isMountedRef.current) {
+          // גלילה מיידית (instant) לראש העמוד
+          window.scrollTo({
+            top: 0,
+            behavior: 'instant' 
+          });
+          // מסמן שהטעינה הראשונה הסתיימה
+          isFirstLoadRef.current = false; 
+        }
+      }, 100); // השהיה קצרה (100ms)
 
+      return () => clearTimeout(timeoutId); // פונקציית Cleanup
+    }
+  }, [isInitializingSession]);
   // 🗑️ The old manual lead capture useEffect has been removed!
 
   //-------------------lead capture effect------------//
